@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Oplus Assistant Hook</string>
+    <string name="xposed_desc">拦截 ColorOS 小布助手相关功能，替换为 Gemini、一圈即搜或自定义助理</string>
+
     <string name="app_subtitle">ColorOS 16 电源键与手势条重定向</string>
 
     <string name="module_status_active_title">模块已激活</string>
