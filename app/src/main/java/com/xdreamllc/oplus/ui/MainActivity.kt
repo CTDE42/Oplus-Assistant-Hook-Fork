@@ -396,7 +396,7 @@ class MainActivity : ComponentActivity() {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(10.dp).clip(CircleShape).background(sc))
                 Spacer(Modifier.width(12.dp))
-                Column { Text(t, 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1A1A1A)); Text(d, 12.sp, color = Color(0xFF666666)) }
+                Column { Text(text = t, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF1A1A1A)); Text(text = d, fontSize = 12.sp, color = Color(0xFF666666)) }
             }
         }
     }
