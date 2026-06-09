@@ -110,11 +110,14 @@ object ButtonInterceptorHooker {
             Config.POWER_MODE_CUSTOM -> {
                 val pkg = PrefsHelper.getCustomPackage()
                 if (pkg.isBlank()) {
-                    XLog.error("Custom assistant: no package configured")
-                } else if (context != null) {
+                    XLog.error("Custom assistant: no package configured, falling through to system")
+                    return false
+                }
+                if (context != null) {
                     TriggerHelper.triggerCustomAssistant(context, pkg)
                 } else {
                     XLog.error("No context available for custom assistant trigger")
+                    return false
                 }
             }
         }

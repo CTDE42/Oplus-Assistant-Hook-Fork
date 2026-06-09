@@ -71,18 +71,8 @@ object TriggerHelper {
     fun triggerCustomAssistant(context: Context, packageName: String) {
         val token = Binder.clearCallingIdentity()
         try {
-            val component = findVoiceInteractionService(context, packageName)
-            if (component != null) {
-                warmUpApp(context, component)
-                try { Thread.sleep(POST_CONNECT_SETTLE_MS) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
-                if (tryShowSessionViaVims(attempt = 1)) {
-                    XLog.debug("Custom assistant triggered via VIMS for $packageName")
-                    return
-                }
-                XLog.debug("VIMS path failed for $packageName; trying next fallback")
-            } else {
-                XLog.debug("No VoiceInteractionService found for $packageName")
-            }
+            // Skip VIMS.showSessionForActiveService — it only activates the system default assistant.
+            // Use direct Intent chain instead: ACTION_VOICE_COMMAND → ACTION_ASSIST → Launcher
 
             val voiceCommand = Intent(Intent.ACTION_VOICE_COMMAND).apply {
                 setPackage(packageName)
@@ -91,6 +81,13 @@ object TriggerHelper {
             if (tryStart(context, voiceCommand, "ACTION_VOICE_COMMAND")) {
                 XLog.debug("Custom assistant triggered via ACTION_VOICE_COMMAND for $packageName")
                 return
+            }
+
+            // Pre-warm: bind the VIS to ensure the process is alive before we try ACTION_ASSIST
+            val component = findVoiceInteractionService(context, packageName)
+            if (component != null) {
+                warmUpApp(context, component)
+                try { Thread.sleep(POST_CONNECT_SETTLE_MS) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
             }
 
             val assist = Intent(Intent.ACTION_ASSIST).apply {
