@@ -11,3 +11,4 @@ local.properties
 *.hprof
 oplus_backup_*/
 app/build/
+# Trigger CI
