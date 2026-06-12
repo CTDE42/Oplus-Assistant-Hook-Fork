@@ -127,8 +127,6 @@ class MainActivity : ComponentActivity() {
             if (all.isEmpty()) return
             val editor = target.edit()
             for ((key, value) in all) {
-                // Only write keys that don't already exist in remote,
-                // to avoid overwriting values that were previously saved remotely
                 if (!target.contains(key)) {
                     when (value) {
                         is Int -> editor.putInt(key, value)
@@ -305,7 +303,7 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.height(10.dp))
                 InfoCard(stringResource(R.string.gesture_requirement))
                 Spacer(Modifier.height(32.dp))
-                HorizontalDivider(color = Color(0xFFEEEEEE))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.footer_effective_hint), fontSize = 12.sp, color = Color(0xFFFF9500), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center)
                 Spacer(Modifier.height(24.dp))
@@ -316,8 +314,11 @@ class MainActivity : ComponentActivity() {
             AppPickerDialog(remember { queryVoiceInteractionApps() }, customPackage, { pkg ->
                 customPackage = pkg; settings.putString(Config.KEY_CUSTOM_PACKAGE, pkg); showAppPicker = false
             }, { showAppPicker = false })
-@Composable
-fun CustomAssistantSection(customPackage: String, onSelectApp: () -> Unit, onPackageChanged: (String) -> Unit) {
+        }
+    }
+
+    @Composable
+    fun CustomAssistantSection(customPackage: String, onSelectApp: () -> Unit, onPackageChanged: (String) -> Unit) {
         val appName = remember(customPackage) { if (customPackage.isNotBlank()) getAppName(customPackage) else null }
         val appIcon = remember(customPackage) { if (customPackage.isNotBlank()) getAppIcon(customPackage) else null }
 
@@ -386,21 +387,16 @@ fun CustomAssistantSection(customPackage: String, onSelectApp: () -> Unit, onPac
     }
 
     @Composable
-    fun InfoCard(text: String) {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(14.dp)) {
-            Row { Icon(Icons.Filled.Info, contentDescription = null, tint = Color(0xFFFF9500), modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(text, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp) }
-        }
-    }
-fun ModuleStatusCard(service: XposedService?) {
-    val active = service != null
-    val fn = remember(service) { try { service?.frameworkName } catch (_: Throwable) { null } }
-    val av = remember(service) { try { service?.apiVersion ?: 0 } catch (_: Throwable) { 0 } }
-    val sc = if (active) Color(0xFF34A853) else Color(0xFFE53935)
-    val bg = if (active) Color(0xFFEFFAEF) else Color(0xFFFDECEA)
-    val t = if (active) stringResource(R.string.module_status_active_title) else stringResource(R.string.module_status_inactive_title)
-    val d = if (active) { val n = fn ?: "libxposed"; if (av > 0) stringResource(R.string.module_status_active_desc_with_api, n, av) else stringResource(R.string.module_status_active_desc, n) }
-    else stringResource(R.string.module_status_inactive_desc)
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, sc.copy(alpha = 0.35f), RoundedCornerShape(14.dp)).padding(16.dp)) {
+    fun ModuleStatusCard(service: XposedService?) {
+        val active = service != null
+        val fn = remember(service) { try { service?.frameworkName } catch (_: Throwable) { null } }
+        val av = remember(service) { try { service?.apiVersion ?: 0 } catch (_: Throwable) { 0 } }
+        val sc = if (active) Color(0xFF34A853) else Color(0xFFE53935)
+        val bg = if (active) Color(0xFFEFFAEF) else Color(0xFFFDECEA)
+        val t = if (active) stringResource(R.string.module_status_active_title) else stringResource(R.string.module_status_inactive_title)
+        val d = if (active) { val n = fn ?: "libxposed"; if (av > 0) stringResource(R.string.module_status_active_desc_with_api, n, av) else stringResource(R.string.module_status_active_desc, n) }
+        else stringResource(R.string.module_status_inactive_desc)
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, sc.copy(alpha = 0.35f), RoundedCornerShape(14.dp)).padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(10.dp).clip(CircleShape).background(sc))
                 Spacer(Modifier.width(12.dp))
@@ -410,70 +406,70 @@ fun ModuleStatusCard(service: XposedService?) {
     }
 
     @Composable
-fun DefaultAssistantCard(assistantInfo: AssistantInfo?, onRefresh: () -> Unit) {
-    val isGoogle = assistantInfo?.packageName == Config.PKG_GOOGLE
-    val bg = if (isGoogle) Color(0xFFF0FAF0) else Color(0xFFFFF8E1)
-    val bc = if (isGoogle) Color(0xFF34A853).copy(alpha = 0.3f) else Color(0xFFFFA000).copy(alpha = 0.3f)
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, bc, RoundedCornerShape(14.dp)).clickable {
-        if (isGoogle) openDefaultAssistantSettings()
-        else if (setGoogleAsDefaultAssistantOrOpenSettings()) onRefresh()
-    }.padding(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            if (assistantInfo?.icon != null) Image(bitmap = assistantInfo.icon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
-            else Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(40.dp))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.default_assistant_label), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(assistantInfo?.name ?: stringResource(R.string.default_assistant_unset), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                if (!isGoogle) Text(stringResource(R.string.default_assistant_warning), fontSize = 11.sp, color = Color(0xFFFFA000))
+    fun DefaultAssistantCard(assistantInfo: AssistantInfo?, onRefresh: () -> Unit) {
+        val isGoogle = assistantInfo?.packageName == Config.PKG_GOOGLE
+        val bg = if (isGoogle) Color(0xFFF0FAF0) else Color(0xFFFFF8E1)
+        val bc = if (isGoogle) Color(0xFF34A853).copy(alpha = 0.3f) else Color(0xFFFFA000).copy(alpha = 0.3f)
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, bc, RoundedCornerShape(14.dp)).clickable {
+            if (isGoogle) openDefaultAssistantSettings()
+            else if (setGoogleAsDefaultAssistantOrOpenSettings()) onRefresh()
+        }.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                if (assistantInfo?.icon != null) Image(bitmap = assistantInfo.icon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+                else Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(40.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.default_assistant_label), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(assistantInfo?.name ?: stringResource(R.string.default_assistant_unset), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                    if (!isGoogle) Text(stringResource(R.string.default_assistant_warning), fontSize = 11.sp, color = Color(0xFFFFA000))
+                }
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.open_settings), tint = Color(0xFFBBBBBB), modifier = Modifier.size(20.dp))
             }
-            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.open_settings), tint = Color(0xFFBBBBBB), modifier = Modifier.size(20.dp))
         }
     }
-}
 
     @Composable
-fun SectionHeader(title: String, subtitle: String) {
-    Column {
-        Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
-        Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
-    }
-}
-
-    @Composable
-fun RadioOptionCard(title: String, subtitle: String, iconResId: Int?, selected: Boolean, accentColor: Color, onClick: () -> Unit) {
-    val bc by animateColorAsState(if (selected) accentColor else Color(0xFFE0E0E0), tween(250), label = "b")
-    val bg by animateColorAsState(if (selected) accentColor.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "bg")
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).border(1.5.dp, bc, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (iconResId != null) Image(painterResource(iconResId), contentDescription = title, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
-            else Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.outline), contentAlignment = Alignment.Center) { Text("X", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) { Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface); Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            if (selected) Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
-            else Box(Modifier.size(20.dp).border(2.dp, MaterialTheme.colorScheme.outline, CircleShape))
+    fun SectionHeader(title: String, subtitle: String) {
+        Column {
+            Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+            Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(top = 2.dp))
         }
     }
-}
 
     @Composable
-fun ToggleCard(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-    val bc by animateColorAsState(if (checked) Color(0xFF34A853) else Color(0xFFE0E0E0), tween(250), label = "tb")
-    val bg by animateColorAsState(if (checked) Color(0xFFF0FAF0) else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "tbg")
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).border(1.5.dp, bc, RoundedCornerShape(12.dp)).padding(14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Image(painterResource(R.drawable.google), contentDescription = null, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) { Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface); Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            Switch(checked, onCheckedChange, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF34A853), uncheckedThumbColor = Color(0xFFBBBBBB), uncheckedTrackColor = Color(0xFFE0E0E0)))
+    fun RadioOptionCard(title: String, subtitle: String, iconResId: Int?, selected: Boolean, accentColor: Color, onClick: () -> Unit) {
+        val bc by animateColorAsState(if (selected) accentColor else Color(0xFFE0E0E0), tween(250), label = "b")
+        val bg by animateColorAsState(if (selected) accentColor.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "bg")
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).border(1.5.dp, bc, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (iconResId != null) Image(painterResource(iconResId), contentDescription = title, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
+                else Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.outline), contentAlignment = Alignment.Center) { Text("X", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) }
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) { Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface); Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (selected) Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
+                else Box(Modifier.size(20.dp).border(2.dp, MaterialTheme.colorScheme.outline, CircleShape))
+            }
         }
     }
-}
+
+    @Composable
+    fun ToggleCard(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+        val bc by animateColorAsState(if (checked) Color(0xFF34A853) else Color(0xFFE0E0E0), tween(250), label = "tb")
+        val bg by animateColorAsState(if (checked) Color(0xFFF0FAF0) else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "tbg")
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).border(1.5.dp, bc, RoundedCornerShape(12.dp)).padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+                Image(painterResource(R.drawable.google), contentDescription = null, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) { Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface); Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Switch(checked, onCheckedChange, colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = Color(0xFF34A853), uncheckedThumbColor = Color(0xFFBBBBBB), uncheckedTrackColor = Color(0xFFE0E0E0)))
+            }
+        }
+    }
 
     @Composable
     fun InfoCard(text: String) {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(Color(0xFFF5F5F5)).padding(14.dp)) {
-            Row { Icon(Icons.Filled.Info, contentDescription = null, tint = Color(0xFFFF9500), modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(text, fontSize = 12.sp, color = Color(0xFF666666), lineHeight = 18.sp) }
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(14.dp)) {
+            Row { Icon(Icons.Filled.Info, contentDescription = null, tint = Color(0xFFFF9500), modifier = Modifier.size(18.dp)); Spacer(Modifier.width(8.dp)); Text(text, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, lineHeight = 18.sp) }
         }
     }
 }
