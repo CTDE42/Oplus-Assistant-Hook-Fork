@@ -125,13 +125,17 @@ class MainActivity : ComponentActivity() {
             if (all.isEmpty()) return
             val editor = target.edit()
             for ((key, value) in all) {
-                when (value) {
-                    is Int -> editor.putInt(key, value)
-                    is Boolean -> editor.putBoolean(key, value)
-                    is String -> editor.putString(key, value)
-                    is Long -> editor.putLong(key, value)
-                    is Float -> editor.putFloat(key, value)
-                    else -> Unit
+                // Only write keys that don't already exist in remote,
+                // to avoid overwriting values that were previously saved remotely
+                if (!target.contains(key)) {
+                    when (value) {
+                        is Int -> editor.putInt(key, value)
+                        is Boolean -> editor.putBoolean(key, value)
+                        is String -> editor.putString(key, value)
+                        is Long -> editor.putLong(key, value)
+                        is Float -> editor.putFloat(key, value)
+                        else -> Unit
+                    }
                 }
             }
             editor.apply()
