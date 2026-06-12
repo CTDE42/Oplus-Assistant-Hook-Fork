@@ -392,7 +392,12 @@ class MainActivity : ComponentActivity() {
         val fn = remember(service) { try { service?.frameworkName } catch (_: Throwable) { null } }
         val av = remember(service) { try { service?.apiVersion ?: 0 } catch (_: Throwable) { 0 } }
         val sc = if (active) Color(0xFF34A853) else Color(0xFFE53935)
-        val bg = if (active) Color(0xFFEFFAEF) else Color(0xFFFDECEA)
+        val darkTheme = isSystemInDarkTheme()
+        val bg = if (active) {
+            if (darkTheme) Color(0xFF1B3A2F) else Color(0xFFEFFAEF)
+        } else {
+            if (darkTheme) Color(0xFF3B1F1F) else Color(0xFFFDECEA)
+        }
         val t = if (active) stringResource(R.string.module_status_active_title) else stringResource(R.string.module_status_inactive_title)
         val d = if (active) { val n = fn ?: "libxposed"; if (av > 0) stringResource(R.string.module_status_active_desc_with_api, n, av) else stringResource(R.string.module_status_active_desc, n) }
         else stringResource(R.string.module_status_inactive_desc)
@@ -408,7 +413,12 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun DefaultAssistantCard(assistantInfo: AssistantInfo?, onRefresh: () -> Unit) {
         val isGoogle = assistantInfo?.packageName == Config.PKG_GOOGLE
-        val bg = if (isGoogle) Color(0xFFF0FAF0) else Color(0xFFFFF8E1)
+        val darkTheme = isSystemInDarkTheme()
+        val bg = if (isGoogle) {
+            if (darkTheme) Color(0xFF1B3A2F) else Color(0xFFF0FAF0)
+        } else {
+            if (darkTheme) Color(0xFF3B2F00) else Color(0xFFFFF8E1)
+        }
         val bc = if (isGoogle) Color(0xFF34A853).copy(alpha = 0.3f) else Color(0xFFFFA000).copy(alpha = 0.3f)
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, bc, RoundedCornerShape(14.dp)).clickable {
             if (isGoogle) openDefaultAssistantSettings()
