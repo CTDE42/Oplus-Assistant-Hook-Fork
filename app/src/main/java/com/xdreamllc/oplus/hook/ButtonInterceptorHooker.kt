@@ -120,6 +120,11 @@ object ButtonInterceptorHooker {
                     return false
                 }
             }
+
+            Config.POWER_MODE_NONE -> {
+                XLog.debug("Power mode is NONE, letting system handle the event")
+                return false
+            }
         }
 
         return true
