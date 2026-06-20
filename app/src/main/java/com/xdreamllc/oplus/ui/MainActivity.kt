@@ -448,8 +448,10 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun RadioOptionCard(title: String, subtitle: String, iconResId: Int?, selected: Boolean, accentColor: Color, onClick: () -> Unit) {
-        val bc by animateColorAsState(if (selected) accentColor else Color(0xFFE0E0E0), tween(250), label = "b")
-        val bg by animateColorAsState(if (selected) accentColor.copy(alpha = 0.06f) else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "bg")
+        val darkTheme = isSystemInDarkTheme()
+        val bc by animateColorAsState(if (selected) accentColor else MaterialTheme.colorScheme.outline, tween(250), label = "b")
+        val selectedBg = if (darkTheme) accentColor.copy(alpha = 0.12f) else accentColor.copy(alpha = 0.06f)
+        val bg by animateColorAsState(if (selected) selectedBg else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "bg")
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).border(1.5.dp, bc, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (iconResId != null) Image(painterResource(iconResId), contentDescription = title, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
@@ -464,8 +466,10 @@ class MainActivity : ComponentActivity() {
 
     @Composable
     fun ToggleCard(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
-        val bc by animateColorAsState(if (checked) Color(0xFF34A853) else Color(0xFFE0E0E0), tween(250), label = "tb")
-        val bg by animateColorAsState(if (checked) Color(0xFFF0FAF0) else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "tbg")
+        val darkTheme = isSystemInDarkTheme()
+        val bc by animateColorAsState(if (checked) Color(0xFF34A853) else MaterialTheme.colorScheme.outline, tween(250), label = "tb")
+        val checkedBg = if (darkTheme) Color(0xFF12351E) else Color(0xFFF0FAF0)
+        val bg by animateColorAsState(if (checked) checkedBg else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "tbg")
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).border(1.5.dp, bc, RoundedCornerShape(12.dp)).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
                 Image(painterResource(R.drawable.google), contentDescription = null, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
@@ -491,13 +495,13 @@ fun AppTheme(content: @Composable () -> Unit) {
         darkColorScheme(
             primary = Color(0xFF8AB4F8),
             onPrimary = Color(0xFF0031CB),
-            surface = Color(0xFF121212),
-            onSurface = Color(0xFFE0E0E0),
-            background = Color(0xFF121212),
-            onBackground = Color(0xFFE0E0E0),
-            surfaceVariant = Color(0xFF2D2D2D),
-            onSurfaceVariant = Color(0xFFC0C0C0),
-            outline = Color(0xFF444444),
+            surface = Color.Black,
+            onSurface = Color(0xFFEDEDED),
+            background = Color.Black,
+            onBackground = Color(0xFFEDEDED),
+            surfaceVariant = Color(0xFF101010),
+            onSurfaceVariant = Color(0xFFBDBDBD),
+            outline = Color(0xFF2A2A2A),
             error = Color(0xFFCF6679),
             onError = Color(0xFF000000)
         )
