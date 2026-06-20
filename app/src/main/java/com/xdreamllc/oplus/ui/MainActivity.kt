@@ -449,13 +449,17 @@ class MainActivity : ComponentActivity() {
     @Composable
     fun RadioOptionCard(title: String, subtitle: String, iconResId: Int?, selected: Boolean, accentColor: Color, onClick: () -> Unit) {
         val darkTheme = isSystemInDarkTheme()
-        val bc by animateColorAsState(if (selected) accentColor else MaterialTheme.colorScheme.outline, tween(250), label = "b")
-        val selectedBg = if (darkTheme) accentColor.copy(alpha = 0.12f) else accentColor.copy(alpha = 0.06f)
-        val bg by animateColorAsState(if (selected) selectedBg else MaterialTheme.colorScheme.surfaceVariant, tween(250), label = "bg")
+        val unselectedBorder = if (darkTheme) MaterialTheme.colorScheme.outline else Color(0xFFE0E0E0)
+        val unselectedBg = if (darkTheme) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFAFAFA)
+        val selectedBg = if (darkTheme) accentColor.copy(alpha = 0.12f) else accentColor.copy(alpha = 0.13f)
+        val noneIconBg = if (darkTheme) MaterialTheme.colorScheme.surfaceVariant else Color(0xFFFFEBEE)
+        val noneIconColor = if (darkTheme) MaterialTheme.colorScheme.onSurfaceVariant else Color(0xFFD93025)
+        val bc by animateColorAsState(if (selected) accentColor else unselectedBorder, tween(250), label = "b")
+        val bg by animateColorAsState(if (selected) selectedBg else unselectedBg, tween(250), label = "bg")
         Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(bg).border(1.5.dp, bc, RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (iconResId != null) Image(painterResource(iconResId), contentDescription = title, modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)))
-                else Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(MaterialTheme.colorScheme.outline), contentAlignment = Alignment.Center) { Text("X", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.Bold) }
+                else Box(Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(noneIconBg), contentAlignment = Alignment.Center) { Text("X", fontSize = 14.sp, color = noneIconColor, fontWeight = FontWeight.Bold) }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) { Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface); Text(subtitle, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 if (selected) Icon(Icons.Filled.CheckCircle, contentDescription = null, tint = accentColor, modifier = Modifier.size(22.dp))
@@ -512,7 +516,10 @@ fun AppTheme(content: @Composable () -> Unit) {
             surface = Color.White,
             onSurface = Color(0xFF1A1A1A),
             background = Color.White,
-            onBackground = Color(0xFF1A1A1A)
+            onBackground = Color(0xFF1A1A1A),
+            surfaceVariant = Color(0xFFF7F8FA),
+            onSurfaceVariant = Color(0xFF5F6368),
+            outline = Color(0xFFE0E0E0)
         )
     }
 
