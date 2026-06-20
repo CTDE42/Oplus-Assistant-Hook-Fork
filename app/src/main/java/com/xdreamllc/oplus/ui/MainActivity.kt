@@ -266,7 +266,7 @@ class MainActivity : ComponentActivity() {
                 Spacer(Modifier.height(20.dp))
                 ModuleStatusCard(service)
                 Spacer(Modifier.height(16.dp))
-                DefaultAssistantCard(assistantInfo) { assistantInfo = getCurrentAssistantInfo() }
+                DefaultAssistantCard(assistantInfo, powerMode, customPackage) { assistantInfo = getCurrentAssistantInfo() }
                 Spacer(Modifier.height(24.dp))
                 SectionHeader(stringResource(R.string.section_power_title), stringResource(R.string.section_power_subtitle))
                 Spacer(Modifier.height(10.dp))
@@ -411,29 +411,148 @@ class MainActivity : ComponentActivity() {
     }
 
     @Composable
-    fun DefaultAssistantCard(assistantInfo: AssistantInfo?, onRefresh: () -> Unit) {
-        val isGoogle = assistantInfo?.packageName == Config.PKG_GOOGLE
+    fun DefaultAssistantCard(assistantInfo: AssistantInfo?, powerMode: Int, customPackage: String, onRefresh: () -> Unit) {
         val darkTheme = isSystemInDarkTheme()
-        val bg = if (isGoogle) {
-            if (darkTheme) Color(0xFF1B3A2F) else Color(0xFFF0FAF0)
-        } else {
-            if (darkTheme) Color(0xFF3B2F00) else Color(0xFFFFF8E1)
+        val ctx = LocalContext.current
+        val isGoogle = assistantInfo?.packageName == Config.PKG_GOOGLE
+        val customLabel = remember(customPackage) {
+            if (customPackage.isBlank()) null
+            else (try {
+                val ai = ctx.packageManager.getApplicationInfo(customPackage, 0)
+                ai.loadLabel(ctx.packageManager).toString()
+            } catch (_: Throwable) { null }) ?: customPackage
         }
-        val bc = if (isGoogle) Color(0xFF34A853).copy(alpha = 0.3f) else Color(0xFFFFA000).copy(alpha = 0.3f)
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, bc, RoundedCornerShape(14.dp)).clickable {
-            if (isGoogle) openDefaultAssistantSettings()
-            else if (setGoogleAsDefaultAssistantOrOpenSettings()) onRefresh()
-        }.padding(16.dp)) {
+
+        val title: String
+        val description: String
+        val showArrow: Boolean
+        val bg: Color
+        val bc: Color
+        val tint: Color
+
+        when (powerMode) {
+            Config.POWER_MODE_GEMINI -> {
+                title = stringResource(R.string.default_assistant_label)
+                description = assistantInfo?.name ?: stringResource(R.string.default_assistant_unset)
+                showArrow = true
+                if (isGoogle) {
+                    bg = if (darkTheme) Color(0xFF1B3A2F) else Color(0xFFF0FAF0)
+                    bc = Color(0xFF34A853).copy(alpha = 0.3f)
+                    tint = Color(0xFF34A853)
+                } else {
+                    bg = if (darkTheme) Color(0xFF3B2F00) else Color(0xFFFFF8E1)
+                    bc = Color(0xFFFFA000).copy(alpha = 0.3f)
+                    tint = Color(0xFFFFA000)
+                }
+            }
+            Config.POWER_MODE_CUSTOM -> {
+                if (customLabel != null) {
+                    title = "当前自定义助理"
+                    description = "长按电源键将尝试唤起 $customLabel"
+                    showArrow = true
+                    bg = if (darkTheme) Color(0xFF2A1B3A) else Color(0xFFF3E5F5)
+                    bc = Color(0xFF8E24AA).copy(alpha = 0.3f)
+                    tint = Color(0xFF8E24AA)
+                } else {
+                    title = "自定义助理未设置"
+                    description = "请选择一个支持 VoiceInteractionService 的应用"
+                    showArrow = false
+                    bg = if (darkTheme) Color(0xFF3B2F00) else Color(0xFFFFF8E1)
+                    bc = Color(0xFFFFA000).copy(alpha = 0.3f)
+                    tint = Color(0xFFFFA000)
+                }
+            }
+            Config.POWER_MODE_CIRCLE -> {
+                title = "当前模式：一圈即搜"
+                description = "长按电源键将尝试启动 Circle to Search" + if (isGoogle) "" else "（建议将 Google 设为系统默认助理以获得最佳体验）"
+                showArrow = true
+                bg = if (darkTheme) Color(0xFF1B3A2F) else Color(0xFFEFFAEF)
+                bc = Color(0xFF34A853).copy(alpha = 0.3f)
+                tint = Color(0xFF34A853)
+            }
+            Config.POWER_MODE_NONE -> {
+                title = "当前模式：保持原样"
+                description = "模块不会拦截电源键长按，将交由系统默认行为处理"
+                showArrow = false
+                bg = if (darkTheme) Color(0xFF101010) else Color(0xFFFAFAFA)
+                bc = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                tint = Color(0xFF9E9E9E)
+            }
+            else -> {
+                title = stringResource(R.string.default_assistant_label)
+                description = assistantInfo?.name ?: stringResource(R.string.default_assistant_unset)
+                showArrow = true
+                bg = if (darkTheme) Color(0xFF101010) else Color(0xFFFAFAFA)
+                bc = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f)
+                tint = Color(0xFF9E9E9E)
+            }
+        }
+
+        val clickAction: () -> Unit = {
+            when (powerMode) {
+                Config.POWER_MODE_GEMINI -> {
+                    if (isGoogle) openDefaultAssistantSettings()
+                    else if (setGoogleAsDefaultAssistantOrOpenSettings()) onRefresh()
+                }
+                Config.POWER_MODE_CUSTOM,
+                Config.POWER_MODE_CIRCLE -> {
+                    openDefaultAssistantSettings()
+                }
+                else -> Unit
+            }
+        }
+
+        val iconPainter: @Composable () -> Unit = {
+            if (powerMode == Config.POWER_MODE_CUSTOM && customLabel != null) {
+                val customIcon = remember(customPackage) {
+                    try {
+                        val ai = ctx.packageManager.getApplicationInfo(customPackage, 0)
+                        val d = ai.loadIcon(ctx.packageManager)
+                        val b = Bitmap.createBitmap(maxOf(d.intrinsicWidth, 1), maxOf(d.intrinsicHeight, 1), Bitmap.Config.ARGB_8888)
+                        val canvas = Canvas(b)
+                        d.setBounds(0, 0, canvas.width, canvas.height)
+                        d.draw(canvas)
+                        b
+                    } catch (_: Throwable) { null }
+                }
+                if (customIcon != null) {
+                    Image(bitmap = customIcon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+                } else {
+                    Icon(Icons.Filled.Search, contentDescription = null, tint = tint, modifier = Modifier.size(40.dp))
+                }
+            } else if (powerMode == Config.POWER_MODE_GEMINI && assistantInfo?.icon != null) {
+                Image(bitmap = assistantInfo.icon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+            } else {
+                val iconPainterRes = when (powerMode) {
+                    Config.POWER_MODE_CIRCLE -> R.drawable.google
+                    else -> null
+                }
+                if (iconPainterRes != null) {
+                    Image(painterResource(iconPainterRes), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+                } else if (powerMode == Config.POWER_MODE_NONE) {
+                    Icon(Icons.Filled.Info, contentDescription = null, tint = tint, modifier = Modifier.size(40.dp))
+                } else {
+                    Icon(Icons.Filled.Warning, contentDescription = null, tint = tint, modifier = Modifier.size(40.dp))
+                }
+            }
+        }
+
+        val modifier = if (showArrow) {
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, bc, RoundedCornerShape(14.dp)).clickable(onClick = clickAction).padding(16.dp)
+        } else {
+            Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(bg).border(1.dp, bc, RoundedCornerShape(14.dp)).padding(16.dp)
+        }
+
+        Box(modifier) {
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                if (assistantInfo?.icon != null) Image(bitmap = assistantInfo.icon.asImageBitmap(), contentDescription = null, modifier = Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
-                else Icon(Icons.Filled.Warning, contentDescription = null, tint = Color(0xFFFFA000), modifier = Modifier.size(40.dp))
+                iconPainter()
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(stringResource(R.string.default_assistant_label), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(assistantInfo?.name ?: stringResource(R.string.default_assistant_unset), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
-                    if (!isGoogle) Text(stringResource(R.string.default_assistant_warning), fontSize = 11.sp, color = Color(0xFFFFA000))
+                    Text(title, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(description, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                    if (powerMode == Config.POWER_MODE_GEMINI && !isGoogle) Text(stringResource(R.string.default_assistant_warning), fontSize = 11.sp, color = tint)
                 }
-                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.open_settings), tint = Color(0xFFBBBBBB), modifier = Modifier.size(20.dp))
+                if (showArrow) Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = stringResource(R.string.open_settings), tint = Color(0xFFBBBBBB), modifier = Modifier.size(20.dp))
             }
         }
     }
