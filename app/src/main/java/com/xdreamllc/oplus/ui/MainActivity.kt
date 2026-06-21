@@ -446,13 +446,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
             Config.POWER_MODE_CUSTOM -> {
+                val isCustomAssistantActive = customPackage.isNotBlank() && assistantInfo?.packageName == customPackage
                 if (customLabel != null) {
-                    title = "请设置系统默认助理"
-                    description = "点击此卡片前往系统设置，并将默认助理改为 $customLabel"
+                    if (isCustomAssistantActive) {
+                        title = "系统默认助理已设置"
+                        description = "当前系统默认助理已是 $customLabel"
+                    } else {
+                        title = "请设置系统默认助理"
+                        description = "点击此卡片前往系统设置，并将默认助理改为 $customLabel"
+                    }
                     showArrow = true
-                    bg = if (darkTheme) Color(0xFF2A1B3A) else Color(0xFFF3E5F5)
-                    bc = Color(0xFF8E24AA).copy(alpha = 0.3f)
-                    tint = Color(0xFF8E24AA)
+                    if (isCustomAssistantActive) {
+                        bg = if (darkTheme) Color(0xFF1B3A2F) else Color(0xFFF0FAF0)
+                        bc = Color(0xFF34A853).copy(alpha = 0.3f)
+                        tint = Color(0xFF34A853)
+                    } else {
+                        bg = if (darkTheme) Color(0xFF2A1B3A) else Color(0xFFF3E5F5)
+                        bc = Color(0xFF8E24AA).copy(alpha = 0.3f)
+                        tint = Color(0xFF8E24AA)
+                    }
                 } else {
                     title = "自定义助理未设置"
                     description = "请选择一个支持 VoiceInteractionService 的应用"
