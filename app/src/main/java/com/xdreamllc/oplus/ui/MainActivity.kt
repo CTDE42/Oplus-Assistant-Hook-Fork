@@ -506,7 +506,9 @@ class MainActivity : ComponentActivity() {
                     if (isGoogle) openDefaultAssistantSettings()
                     else if (setGoogleAsDefaultAssistantOrOpenSettings()) onRefresh()
                 }
-                Config.POWER_MODE_CUSTOM,
+                Config.POWER_MODE_CUSTOM -> {
+                    if (customPackage.isNotBlank()) openDefaultAssistantSettings()
+                }
                 Config.POWER_MODE_CIRCLE -> {
                     openDefaultAssistantSettings()
                 }
