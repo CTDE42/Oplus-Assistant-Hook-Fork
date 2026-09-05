@@ -71,8 +71,26 @@ object TriggerHelper {
     fun triggerCustomAssistant(context: Context, packageName: String) {
         val token = Binder.clearCallingIdentity()
         try {
-            // Skip VIMS.showSessionForActiveService — it only activates the system default assistant.
-            // Use direct Intent chain instead: ACTION_VOICE_COMMAND → ACTION_ASSIST → Launcher
+            // Priority 0: For ChatGPT, directly launch AssistantActivity
+            if (packageName == "com.openai.chatgpt") {
+                val chatGptVoice = Intent().apply {
+                    component = ComponentName("com.openai.chatgpt", "com.openai.voice.assistant.AssistantActivity")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                if (tryStart(context, chatGptVoice, "ChatGPT AssistantActivity")) {
+                    XLog.debug("Custom assistant triggered via ChatGPT AssistantActivity")
+                    return
+                }
+            }
+
+            // Priority 1: If packageName is currently the system default VoiceInteractionService,
+            // invoke via VIMS showSession (standard Android assistant triggering)
+            if (isActiveVoiceInteractionService(context, packageName)) {
+                if (tryShowSessionViaVims(attempt = 1)) {
+                    XLog.debug("Custom assistant triggered via VIMS for $packageName")
+                    return
+                }
+            }
 
             val voiceCommand = Intent(Intent.ACTION_VOICE_COMMAND).apply {
                 setPackage(packageName)
@@ -90,18 +108,23 @@ object TriggerHelper {
                 try { Thread.sleep(POST_CONNECT_SETTLE_MS) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
             }
 
-            val assist = Intent(Intent.ACTION_ASSIST).apply {
-                setPackage(packageName)
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            }
-            if (tryStart(context, assist, "ACTION_ASSIST")) {
-                XLog.debug("Custom assistant triggered via ACTION_ASSIST for $packageName")
-                return
+            // For non-ChatGPT packages, try ACTION_ASSIST
+            // (ChatGPT has a dummy AssistantProxyActivity that finishes immediately, which produces false-positive)
+            if (packageName != "com.openai.chatgpt") {
+                val assist = Intent(Intent.ACTION_ASSIST).apply {
+                    setPackage(packageName)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                }
+                if (tryStart(context, assist, "ACTION_ASSIST")) {
+                    XLog.debug("Custom assistant triggered via ACTION_ASSIST for $packageName")
+                    return
+                }
             }
 
             try {
                 val launchIntent = context.packageManager.getLaunchIntentForPackage(packageName)
                 if (launchIntent != null) {
+                    launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     context.startActivity(launchIntent)
                     XLog.debug("Custom assistant launched via main activity for $packageName")
                     return
@@ -113,6 +136,18 @@ object TriggerHelper {
             XLog.error("All custom assistant paths failed for $packageName")
         } finally {
             Binder.restoreCallingIdentity(token)
+        }
+    }
+
+    private fun isActiveVoiceInteractionService(context: Context, packageName: String): Boolean {
+        return try {
+            val service = android.provider.Settings.Secure.getString(
+                context.contentResolver,
+                "voice_interaction_service"
+            )
+            service != null && service.startsWith(packageName)
+        } catch (_: Throwable) {
+            false
         }
     }
 
